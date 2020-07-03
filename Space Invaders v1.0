@@ -1,0 +1,133 @@
+import PlaygroundSupport
+import SpriteKit
+
+class GameScene: SKScene, SKPhysicsContactDelegate {
+    
+    let collisionBulletCategory: UInt32  = 0x1 << 0
+    let collisionAlienCategory: UInt32    = 0x1 << 1
+    
+    let ship = SKSpriteNode(texture: SKTexture(image: #imageLiteral(resourceName: "1__#$!@%!#__PNG image.png")))
+    
+    func createShip(){
+        ship.size = CGSize(width: 100, height: 100)
+        ship.color = UIColor.blue
+        ship.position = CGPoint(x: 400, y: 150)
+        self.addChild(ship)
+    }
+    
+    func createAlien(){
+        
+        let alien = SKSpriteNode(texture: SKTexture(image: #imageLiteral(resourceName: "PNG image.png")))
+        
+        alien.size = CGSize(width: 110, height: 100)
+        alien.color = UIColor.green
+        alien.position = CGPoint(x: 0, y: 1100)
+        alien.name = "alien"
+        
+        alien.physicsBody?.isDynamic = true
+        alien.physicsBody = SKPhysicsBody(rectangleOf: alien.frame.size)
+        alien.physicsBody! .affectedByGravity = false
+        alien.physicsBody!.usesPreciseCollisionDetection = true
+        alien.physicsBody!.categoryBitMask = collisionAlienCategory
+        alien.physicsBody!.contactTestBitMask = collisionBulletCategory
+        
+        self.addChild(alien)
+        
+        let moveLeft = SKAction.move(by: CGVector(dx: -800, dy: 0), duration: 3)
+        let moveRight = SKAction.move(by: CGVector(dx: 800, dy: 0), duration: 3)
+        let moveDown = SKAction.move(by: CGVector(dx: 0, dy: -100), duration: 0.1)
+        
+        let sequence = SKAction.sequence([moveRight, moveDown, moveLeft, moveDown])
+        let repeatSequence = SKAction.repeatForever(sequence)
+        alien.run(repeatSequence)
+    }
+    
+    
+    func generateAliens(){
+        let actionWait = SKAction.wait(forDuration: 0.5)
+        let actionRun =  SKAction.run ({
+            self.createAlien()
+        })
+        
+        let sequence = SKAction.sequence([actionWait, actionRun])
+        let sequenceRepeat = SKAction.repeat(sequence, count: 18)
+        
+        self.run(sequenceRepeat)
+    }
+    
+    override func didMove(to view: SKView) {
+        
+        self.physicsWorld.contactDelegate = self
+        
+        createShip()
+        generateAliens()
+        
+        //gesture recognizer
+        let directions: [UISwipeGestureRecognizerDirection] = [.right, .left, .up, .down]
+        
+        for direction in directions {
+            let gesture = UISwipeGestureRecognizer(target: self, action: #selector(GameScene.respondToSwipeGesture(_:)))
+            gesture.direction = direction
+            view.addGestureRecognizer(gesture)
+        }
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        contact.bodyA.node!.removeFromParent()
+        contact.bodyB.node!.removeFromParent()
+    }
+    
+    @objc func respondToSwipeGesture(_ gesture: UIGestureRecognizer) {
+        if let swipeGesture = gesture as? UISwipeGestureRecognizer {
+            switch swipeGesture.direction {
+            case UISwipeGestureRecognizerDirection.right:
+                let moveRight = SKAction.move(by: CGVector(dx: 50, dy: 0), duration: 0.1)
+                ship.run(moveRight)
+            case UISwipeGestureRecognizerDirection.left:
+                let moveLeft = SKAction.move(by: CGVector(dx: -50, dy: 0), duration: 0.1)
+                ship.run(moveLeft)
+            default:
+                break // should never get here.
+            }
+        }
+    }
+    
+    func createBullet(){
+        let bullet = SKSpriteNode()
+        bullet.size = CGSize(width: 25, height: 25)
+        bullet.color = UIColor.red
+        bullet.position = ship.position
+        bullet.name = "bullet"
+        
+        bullet.physicsBody = SKPhysicsBody(rectangleOf: bullet.frame.size)
+        bullet.physicsBody!.isDynamic = true
+        bullet.physicsBody!.affectedByGravity = false
+        bullet.physicsBody!.categoryBitMask = collisionBulletCategory
+        bullet.physicsBody!.contactTestBitMask = collisionAlienCategory
+        bullet.physicsBody!.usesPreciseCollisionDetection = true
+        
+        self.addChild(bullet)
+        
+        let moveUp = SKAction.move(to: CGPoint(x: ship.position.x, y: 1300), duration: 2)
+        bullet.run(moveUp)
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        createBullet()
+    }
+    
+    override func update(_ currentTime: TimeInterval) {
+        // Called before each frame is rendered
+    }
+}
+
+
+let scene = GameScene(size: CGSize(width: 800, height: 1200))
+scene.scaleMode = .aspectFill
+
+let view = SKView(frame: CGRect(x:0, y:0, width: 800, height: 1200))
+view.presentScene(scene)
+
+
+
+PlaygroundPage.current.liveView = view
